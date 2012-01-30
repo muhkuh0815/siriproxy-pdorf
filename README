@@ -1,0 +1,55 @@
+###
+# siriproxy-pdorf  Plugin
+
+This is simple plugin which checks to open Heurigen-Restaurants in Perchtoldsdorf/Austria
+       
+Remember to load the plugin in the "./siriproxy/config.yml" file !
+
+
+Die ist ein Plugin welches abfragt, welche Heurigen in Perchtoldsdorf ausgesteckt haben.
+Funktioniert nur mit den Heurigen in Perchtoldsdorf
+
+      ladet das Plugin in der "./siriproxy/config.yml" datei !
+
+###
+# WIE ES FUNKTIONIERT 
+
+sagt einfach einen Satz mit   "ausgesteckt" und "heute" oder "morgen"
+Siri zeigt dann die offenen Heurigen in einer Liste an.
+
+###
+# Installation
+
+Ihr benötigt zB. Siriproxy 0.3.0:
+
+einfach folgende Zeilen in die User/xxx/.siriproxy/config.yml Datei einfügen (Vorsicht mit Zeilenumbrüchen!!)
+
+- name: 'Pdorf'
+  git: 'git://github.com/muhkuh0815/siriproxy-pdorf.git'
+
+danach einmal Siriproxy bundlen
+die Plugin Dateien liegen dann in
+/User/xxx/.rvm/gems/ruby-1.9.3/bundler/gems/siriproxy-pdorf
+Vorsicht beim editieren, bei jedem Siriproxy update werden sie wieder überschrieben.
+
+
+Falls ihr das Plugin für euch anpassen wollt empfehle ich die Plugindateien von github runterzuladen und sie in
+/User/xxx/Siriproxy/plugins/siriproxy-pdorf
+zu kopieren.
+Der richtige Eintrag in der config.yml Datei wäre dann:
+
+- name: 'Pdorf'
+  path: '/Users/EuerUserName/SiriProxy/plugins/siriproxy-pdorf'
+
+
+###
+# ToDo
+
+ eventuell Wien, wenns ne gute Seite zum parsen gibt
+
+###
+# Kontakt
+
+bei Fragen Twitter: @muhkuh0815
+oder github.com/muhkuh0815/siriproxy-pdorf
+Video preview: noch kein video verfügbar

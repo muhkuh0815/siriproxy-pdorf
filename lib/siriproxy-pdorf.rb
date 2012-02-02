@@ -55,6 +55,41 @@ class SiriProxy::Plugin::Pdorf < SiriProxy::Plugin
     time1 = ttime.day.to_s + "." + ttime.month.to_s + "." + ttime.year.to_s
     return time1
     end
+    def getloc(na)
+      na = na.gsub(" ","+")
+		dos = "http://maps.google.com/maps/api/geocode/xml?address=" + na.to_s + ",+Perchtoldsdorf&sensor=false"
+		begin
+			dos = URI.parse(URI.encode(dos)) # allows Unicharacters in the search URL
+			doc = Nokogiri::XML(open(dos))
+			doc.encoding = 'utf-8'
+# 			doc = doc.text
+		rescue Timeout::Error
+    	 	doc = ""
+		end
+		if doc == NIL
+		  say "Fehler beim Suchen - no data", spoken: "Fehler beim Suchen" 
+		  request_completed
+		elsif
+		  empl = doc.to_s
+		  la = empl.match(/(lat)/)
+		  lo = la.post_match
+		  li = lo.match(/(\/lng)/)
+		  lu = li.pre_match
+ 		  lu = lu.gsub("<lng>",",")
+		  lu = lu.gsub(/<\/?[^>]*>/, "")
+		  lu = lu.gsub(/\n/, "")
+		  lu = lu.gsub("  ", "")
+		  lu.chop!
+		  lu.reverse!
+		  lu.chop!
+		  lu.reverse!
+		  lu.strip!
+# 		  print lu
+		end
+	return lu	
+    end  
+      
+    
     def read(ta)
       @shaf = ""
       begin
@@ -80,30 +115,38 @@ class SiriProxy::Plugin::Pdorf < SiriProxy::Plugin
       data = data.gsub(/\/php\//, ">,newline,<")
       data = data.gsub(/<\/?[^>]*>/, "")
       data = data.strip
+      dat = data.match(/(,newline,)/)
+      data = dat.post_match
       dat = data.split(',')
       datle = dat.length
-      dataa = Array.new
+      @dataa = Array.new
+      @datab = Array.new
       data = ""
       y = 0
+      z = 0
       dat.each do |name|
 	if name == "newline"
+	  z = 0
 	  data = data.chop.chop
 	  data = data.strip
-	  dataa[y] = data
+	  @dataa[y] = data
 	  data = ""
 	  y += 1
+	elsif z == 2
+	  al = getloc(name)
+	  @datab[y] = al.strip
+	  data << name.strip + ", "
 	elsif name.strip == ""
 	else
+ 	  if name[0,5] == " Stüb"
+	  else
 	  data << name.strip + ", "
-	end
+	  end
+	 end
+	z += 1
       end
       @y= y - 1
-      data = ""
-      dataa.each do |line|
-	data << line + " \n\n"
       end
-      end
-      return data
     end
     
     
@@ -117,19 +160,37 @@ listen_for /(ausgesteckt|ausgestreckt).*(heute)/i do
     else
 	y = @y
 	@y = ""
- 	if y == 1
-	  say "", spoken: "heute hat #{y} Häuriger ausgsteckt"
-        else
-	  say "", spoken: "heute haben #{y} Häurige ausgsteckt"
-        end    
-	object = SiriAddViews.new
-    		object.make_root(last_ref_id)
-    		answer = SiriAnswer.new("heute: " + datunorm.to_s, [
-    	  		SiriAnswerLine.new(doc)
-		        ])
-    		object.views << SiriAnswerSnippet.new([answer])
-    		send_object object
-    end    
+	dataa = @dataa
+	datab = @datab
+	@dataa = ""
+	@datab = ""
+ 	add_views = SiriAddViews.new
+	add_views.make_root(last_ref_id)
+    		map_snippet = SiriMapItemSnippet.new(true)
+			z = 0
+			while z < y do
+			la = dataa[z].split(",")
+			sname = la[0].strip
+			li = datab[z]
+			lo = li.match(/,/)
+			lat = lo.pre_match
+			lon = lo.post_match
+    			siri_location = SiriLocation.new(sname, la[1].strip, la[2].strip,"9", "AT", "Perchtoldsdorf" , lat.to_s , lon.to_s)
+    			map_snippet.items << SiriMapItem.new(label=sname , location=siri_location, detailType="BUSINESS_ITEM")
+    			z += 1
+ 			end
+			if y.to_s == 1	
+				say "", spoken: "heute hat #{y} Häuriger ausgsteckt"
+			else	
+				say "", spoken: "heute haben #{y} Häurige ausgsteckt"
+			end	
+			utterance = SiriAssistantUtteranceView.new("")
+    		add_views.views << utterance
+    		add_views.views << map_snippet
+    		send_object add_views 
+    end  
+    @dataa = ""
+    @datab = ""
 request_completed
 end
 
@@ -141,21 +202,39 @@ listen_for /(heute).*(ausgesteckt|ausgestreckt)/i do
     if @shaf =="timeout" 
       say "Es gab ein Problem beim Einlesen der der Daten!"
     else
-	y = @y
+y = @y
 	@y = ""
- 	if y == 1
-	  say "", spoken: "heute hat #{y} Häuriger ausgsteckt"
-        else
-	  say "", spoken: "heute haben #{y} Häurige ausgsteckt"
-        end    
-	object = SiriAddViews.new
-    		object.make_root(last_ref_id)
-    		answer = SiriAnswer.new("heute: " + datunorm.to_s, [
-    	  		SiriAnswerLine.new(doc)
-		        ])
-    		object.views << SiriAnswerSnippet.new([answer])
-    		send_object object
-    end    
+	dataa = @dataa
+	datab = @datab
+	@dataa = ""
+	@datab = ""
+ 	add_views = SiriAddViews.new
+	add_views.make_root(last_ref_id)
+    		map_snippet = SiriMapItemSnippet.new(true)
+			z = 0
+			while z < y do
+			la = dataa[z].split(",")
+			sname = la[0].strip
+			li = datab[z]
+			lo = li.match(/,/)
+			lat = lo.pre_match
+			lon = lo.post_match
+    			siri_location = SiriLocation.new(sname, la[1].strip, la[2].strip,"9", "AT", "Perchtoldsdorf" , lat.to_s , lon.to_s)
+    			map_snippet.items << SiriMapItem.new(label=sname , location=siri_location, detailType="BUSINESS_ITEM")
+    			z += 1
+ 			end
+			if y.to_s == 1	
+				say "", spoken: "heute hat #{y} Häuriger ausgsteckt"
+			else	
+				say "", spoken: "heute haben #{y} Häurige ausgsteckt"
+			end	
+			utterance = SiriAssistantUtteranceView.new("")
+    		add_views.views << utterance
+    		add_views.views << map_snippet
+    		send_object add_views 
+    end  
+    @dataa = ""
+    @datab = ""
 request_completed
 end
 
@@ -167,21 +246,39 @@ listen_for /(ausgesteckt|ausgestreckt).*(morgen)/i do
     if @shaf =="timeout" 
       say "Es gab ein Problem beim Einlesen der der Daten!"
     else
-	y = @y
+y = @y
 	@y = ""
- 	if y == 1
-	  say "", spoken: "morgen hat #{y} Häuriger ausgsteckt"
-        else
-	  say "", spoken: "morgen haben #{y} Häurige ausgsteckt"
-        end    
-	object = SiriAddViews.new
-    		object.make_root(last_ref_id)
-    		answer = SiriAnswer.new("morgen: " + datunorm.to_s, [
-    	  		SiriAnswerLine.new(doc)
-		        ])
-    		object.views << SiriAnswerSnippet.new([answer])
-    		send_object object
-    end    
+	dataa = @dataa
+	datab = @datab
+	@dataa = ""
+	@datab = ""
+ 	add_views = SiriAddViews.new
+	add_views.make_root(last_ref_id)
+    		map_snippet = SiriMapItemSnippet.new(true)
+			z = 0
+			while z < y do
+			la = dataa[z].split(",")
+			sname = la[0].strip
+			li = datab[z]
+			lo = li.match(/,/)
+			lat = lo.pre_match
+			lon = lo.post_match
+    			siri_location = SiriLocation.new(sname, la[1].strip, la[2].strip,"9", "AT", "Perchtoldsdorf" , lat.to_s , lon.to_s)
+    			map_snippet.items << SiriMapItem.new(label=sname , location=siri_location, detailType="BUSINESS_ITEM")
+    			z += 1
+ 			end
+			if y.to_s == 1	
+				say "", spoken: "morgen hat #{y} Häuriger ausgsteckt"
+			else	
+				say "", spoken: "morgen haben #{y} Häurige ausgsteckt"
+			end	
+			utterance = SiriAssistantUtteranceView.new("")
+    		add_views.views << utterance
+    		add_views.views << map_snippet
+    		send_object add_views 
+    end  
+    @dataa = ""
+    @datab = ""
 request_completed
 end
 
@@ -195,19 +292,37 @@ listen_for /(morgen).*(ausgesteckt|ausgestreckt)/i do
     else
 	y = @y
 	@y = ""
- 	if y == 1
-	  say "", spoken: "morgen hat #{y} Häuriger ausgsteckt"
-        else
-	  say "", spoken: "morgen haben #{y} Häurige ausgsteckt"
-        end    
-	object = SiriAddViews.new
-    		object.make_root(last_ref_id)
-    		answer = SiriAnswer.new("morgen: " + datunorm.to_s, [
-    	  		SiriAnswerLine.new(doc)
-		        ])
-    		object.views << SiriAnswerSnippet.new([answer])
-    		send_object object
-    end    
+	dataa = @dataa
+	datab = @datab
+	@dataa = ""
+	@datab = ""
+ 	add_views = SiriAddViews.new
+	add_views.make_root(last_ref_id)
+    		map_snippet = SiriMapItemSnippet.new(true)
+			z = 0
+			while z < y do
+			la = dataa[z].split(",")
+			sname = la[0].strip
+			li = datab[z]
+			lo = li.match(/,/)
+			lat = lo.pre_match
+			lon = lo.post_match
+    			siri_location = SiriLocation.new(sname, la[1].strip, la[2].strip,"9", "AT", "Perchtoldsdorf" , lat.to_s , lon.to_s)
+    			map_snippet.items << SiriMapItem.new(label=sname , location=siri_location, detailType="BUSINESS_ITEM")
+    			z += 1
+ 			end
+			if y.to_s == 1	
+				say "", spoken: "morgen hat #{y} Häuriger ausgsteckt"
+			else	
+				say "", spoken: "morgen haben #{y} Häurige ausgsteckt"
+			end	
+			utterance = SiriAssistantUtteranceView.new("")
+    		add_views.views << utterance
+    		add_views.views << map_snippet
+    		send_object add_views 
+    end  
+    @dataa = ""
+    @datab = ""
 request_completed
 end
 
